@@ -7,13 +7,30 @@ const port = 3001;
 
 app.use(cors());
 
+// Old data object for progress tracking
+const oldData = {
+  "2215001289":1077,
+  "2215500064":863,
+  // ... (rest of the oldData object)
+};
+
 async function fetchAndSaveData() {
   try {
-    console.log('Starting to read input files...');
-    const rolls = fs.readFileSync('roll.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean);
-    const names = fs.readFileSync('name.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean);
-    const urls = fs.readFileSync('urls.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean);
-    const sections = fs.readFileSync('sections.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean);
+    console.log('Starting to read input files and calculate progress...');
+    // Read old data if exists
+    let oldData = [];
+    try {
+      const oldContent = fs.readFileSync('old.txt', 'utf-8');
+      if (oldContent) {
+        oldData = JSON.parse(oldContent);
+      }
+    } catch (err) {
+      console.log('No previous data found');
+    }
+    const rolls = fs.existsSync('roll.txt') ? fs.readFileSync('roll.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean) : [];
+    const names = fs.existsSync('name.txt') ? fs.readFileSync('name.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean) : [];
+    const urls = fs.existsSync('urls.txt') ? fs.readFileSync('urls.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean) : [];
+    const sections = fs.existsSync('sections.txt') ? fs.readFileSync('sections.txt', 'utf-8').split('\n').map(line => line.trim()).filter(Boolean) : [];
 
     if (rolls.length !== names.length || names.length !== urls.length || names.length !== sections.length) {
       console.error('Error: The number of rolls, names, URLs, and sections do not match.');
@@ -37,18 +54,40 @@ async function fetchAndSaveData() {
         var username = url.split('/u/')[1];
         if(username.charAt(username.length-1) == '/') username = username.substring(0, username.length-1);
         console.log(`Fetching data for LeetCode username: ${username}`);
+        
+        // Get old solved count for this roll number
+        const oldSolved = oldData[roll] || 0;
 
         try {
           const response = await axios.get(`https://leetcodeapi-v1.vercel.app/${username}`);
           const data = response.data;
           if (data && data[username]) {
+            const totalSolved = data[username].submitStatsGlobal.acSubmissionNum[0].count || 0;
+            const easySolved = data[username].submitStatsGlobal.acSubmissionNum[1].count || 0;
+            const mediumSolved = data[username].submitStatsGlobal.acSubmissionNum[2].count || 0;
+            const hardSolved = data[username].submitStatsGlobal.acSubmissionNum[3].count || 0;
+
+            // Find old data for this user
+            const oldUserData = oldData.find(d => d.username === username) || {
+              totalSolved: 0,
+              easySolved: 0,
+              mediumSolved: 0,
+              hardSolved: 0
+            };
+            
             studentData = {
               ...studentData,
               username,
-              totalSolved: data[username].submitStatsGlobal.acSubmissionNum[0].count || 0,
-              easySolved: data[username].submitStatsGlobal.acSubmissionNum[1].count || 0,
-              mediumSolved: data[username].submitStatsGlobal.acSubmissionNum[2].count || 0,
-              hardSolved: data[username].submitStatsGlobal.acSubmissionNum[3].count || 0,
+              totalSolved,
+              easySolved,
+              mediumSolved,
+              hardSolved,
+              progress: {
+                total: totalSolved - oldUserData.totalSolved,
+                easy: easySolved - oldUserData.easySolved,
+                medium: mediumSolved - oldUserData.mediumSolved,
+                hard: hardSolved - oldUserData.hardSolved
+              }
             };
             console.log(`Data for ${username} fetched and processed successfully.`);
           } else {
@@ -71,8 +110,21 @@ async function fetchAndSaveData() {
       return bTotalSolved - aTotalSolved;
     });
 
+    // Save current data to data.json
+    // Save current data to data.json
     fs.writeFileSync('data.json', JSON.stringify(combinedData, null, 2));
     console.log('Data saved to data.json successfully.');
+
+    // Save current data as old data for next comparison
+    const oldDataToSave = combinedData.map(user => ({
+      username: user.username,
+      totalSolved: user.totalSolved || 0,
+      easySolved: user.easySolved || 0,
+      mediumSolved: user.mediumSolved || 0,
+      hardSolved: user.hardSolved || 0
+    }));
+    fs.writeFileSync('old.txt', JSON.stringify(oldDataToSave, null, 2));
+    console.log('Old data saved successfully.');
   } catch (error) {
     console.error('Error processing data:', error);
   }

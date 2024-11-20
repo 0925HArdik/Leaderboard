@@ -15,3 +15,22 @@ tr {
 tr:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
+
+.progress-arrow {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+}
+
+.progress-arrow i {
+    margin-right: 0.25rem;
+}
+
+.progress-positive {
+    color: #34D399;
+}
+
+.progress-negative {
+    color: #F87171;
+}

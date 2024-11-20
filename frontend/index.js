@@ -19,33 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         // Function to export data to CSV
-        const exportToCSV = (data) => {
-            const headers = ['Rank', 'Roll Number', 'Name', 'Section', 'Total Solved', 'Easy', 'Medium', 'Hard', 'LeetCode URL'];
-            const csvRows = data.map((student, index) => {
-                return [
-                    index + 1,
-                    student.roll,
-                    student.name,
-                    student.section || 'N/A',
-                    student.totalSolved || 'N/A',
-                    student.easySolved || 'N/A',
-                    student.mediumSolved || 'N/A',
-                    student.hardSolved || 'N/A',
-                    student.url
-                ].join(',');
-            });
-            
-            const csvContent = [headers.join(','), ...csvRows].join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', 'leaderboard.csv');
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
+        
 
         // Function to render the leaderboard
         const renderLeaderboard = (sortedData) => {
@@ -62,10 +36,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                             : `<div class="text-red-500">${student.name}</div>`}
                     </td>
                     <td class="p-4">${student.section || 'N/A'}</td>
-                    <td class="p-4">${student.totalSolved || 'N/A'}</td>
-                    <td class="p-4 text-green-400">${student.easySolved || 'N/A'}</td>
-                    <td class="p-4 text-yellow-400">${student.mediumSolved || 'N/A'}</td>
-                    <td class="p-4 text-red-400">${student.hardSolved || 'N/A'}</td>
+                    <td class="p-4">
+                        ${student.totalSolved || 'N/A'}
+                        ${student.progress?.total ? 
+                            `<span class="${student.progress.total > 0 ? 'text-green-400' : 'text-red-400'} ml-2">
+                                (${student.progress.total > 0 ? '+' : ''}${student.progress.total})
+                            </span>` : 
+                            ''}
+                    </td>
+                    <td class="p-4 text-green-400">
+                        ${student.easySolved || 'N/A'}
+                        ${student.progress?.easy ? 
+                            `<span class="text-xs ml-1 ${student.progress.easy > 0 ? 'text-green-400' : 'text-red-400'}">
+                                (${student.progress.easy > 0 ? '+' : ''}${student.progress.easy})
+                            </span>` : ''}
+                    </td>
+                    <td class="p-4 text-yellow-400">
+                        ${student.mediumSolved || 'N/A'}
+                        ${student.progress?.medium ? 
+                            `<span class="text-xs ml-1 ${student.progress.medium > 0 ? 'text-green-400' : 'text-red-400'}">
+                                (${student.progress.medium > 0 ? '+' : ''}${student.progress.medium})
+                            </span>` : ''}
+                    </td>
+                    <td class="p-4 text-red-400">
+                        ${student.hardSolved || 'N/A'}
+                        ${student.progress?.hard ? 
+                            `<span class="text-xs ml-1 ${student.progress.hard > 0 ? 'text-green-400' : 'text-red-400'}">
+                                (${student.progress.hard > 0 ? '+' : ''}${student.progress.hard})
+                            </span>` : ''}
+                    </td>
                 `;
                 leaderboardBody.appendChild(row);
             });
@@ -109,9 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             filterData(e.target.value);
         });
 
-        document.getElementById('export-btn').addEventListener('click', () => {
-            exportToCSV(filteredData); // Export only filtered data
-        });
+        
 
         document.getElementById('sort-section').addEventListener('click', () => {
             sectionDirection = sectionDirection === 'desc' ? 'asc' : 'desc';
